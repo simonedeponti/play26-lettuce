@@ -21,14 +21,14 @@ class LettuceModule extends SimpleModule((environment: Environment, configuratio
   // bind a cache with the given name
   def bindCache(name: String) = {
     val namedCache = named(name)
-    val cacheApiKey = bind[AsyncCacheApi].qualifiedWith(namedCache)
     Seq(
-      cacheApiKey.to(new LettuceClientProvider(configuration, name))
+      bind[LettuceCacheApi].qualifiedWith(namedCache).to(new LettuceClientProvider(configuration, name)),
+      bind[AsyncCacheApi].qualifiedWith(namedCache).to(new LettuceClientProvider(configuration, name))
     )
   }
 
   Seq(
-    bind[LettuceCacheApi].to[LettuceClient],
-    bind[AsyncCacheApi].to(bind[AsyncCacheApi].qualifiedWith(named(defaultCacheName)))
+    bind[LettuceCacheApi].to(new LettuceClientProvider(configuration, defaultCacheName)),
+    bind[AsyncCacheApi].to(new LettuceClientProvider(configuration, defaultCacheName))
   ) ++ bindCaches.flatMap(bindCache)
 })
