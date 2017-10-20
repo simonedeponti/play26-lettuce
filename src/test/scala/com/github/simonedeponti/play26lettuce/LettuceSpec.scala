@@ -19,7 +19,7 @@ class LettuceSpec extends Specification {
   private val redisURL = Try(sys.env("REDIS_URL")) match {
     case Success(v) => v
     case Failure(e) => e match {
-      case nse: NoSuchElementException => "redis://localhost/0"
+      case _: NoSuchElementException => "redis://localhost/0"
       case e: Throwable => throw e
     }
   }
@@ -120,7 +120,7 @@ class LettuceSpec extends Specification {
       implicit ee: ExecutionEnv => {
         val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[AsyncCacheApi]))
         val result_ok: Future[Option[Int]] = cacheApi.set("baz", 1).flatMap(
-          _ => cacheApi.get("baz")
+          _ => cacheApi.get[Int]("baz")
         )
 
         result_ok must beSome(1).await
@@ -130,9 +130,54 @@ class LettuceSpec extends Specification {
     "get none if not present" in {
       implicit ee: ExecutionEnv => {
         val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[AsyncCacheApi]))
-        val result_ko: Future[Option[Int]] = cacheApi.get("taz")
+        val result_ko: Future[Option[Int]] = cacheApi.get[Int]("taz")
 
         result_ko must beNone.await
+      }
+    }
+
+    "get or else update" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[AsyncCacheApi]))
+        val result_ok: Future[Int] = cacheApi.getOrElseUpdate[Int]("paz", Duration(10, "seconds")) {
+          Future {
+            1
+          }
+        }
+
+        result_ok must beEqualTo(1).await
+
+        val result_eq: Future[Int] = cacheApi.getOrElseUpdate[Int]("paz", Duration(10, "seconds")) {
+          Future {
+            2
+          }
+        }
+
+        result_eq must beEqualTo(1).await
+      }
+    }
+
+    "remove deletes it" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[AsyncCacheApi]))
+
+        val result_ok: Future[Option[Int]] = cacheApi.get[Int]("foo")
+        result_ok must beSome(1).await
+
+        val result_fin: Future[Done] = cacheApi.remove("foo")
+        result_fin must beAnInstanceOf[Done].await
+
+        val result_ko: Future[Option[Int]] = cacheApi.get[Int]("foo")
+        result_ko must beNone.await
+      }
+    }
+
+    "removeAll should not explode" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[AsyncCacheApi]))
+
+        val result_fin: Future[Done] = cacheApi.removeAll()
+        result_fin must beAnInstanceOf[Done].await
       }
     }
   }

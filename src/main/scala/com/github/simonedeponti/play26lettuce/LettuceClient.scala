@@ -29,7 +29,7 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
   private val serialization = SerializationExtension(system)
 
   private def deserialize[T](data: Array[Byte], ctag: ClassTag[T]): T = {
-    serialization.deserialize[T](data, ctag.runtimeClass.asInstanceOf[Class[T]]) match {
+    serialization.deserialize[T](data, ctag.getClass.asInstanceOf[Class[T]]) match {
       case Success(v) => v
       case Failure(e) => throw e
     }
@@ -68,15 +68,11 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
 
   override def getOrElseUpdate[A](key: String, expiration: Duration)(orElse: => Future[A])(implicit ctag: ClassTag[A]): Future[A] = {
     commands.get(s"$name::$key".getBytes("UTF-8")).toScala.flatMap({
-      case (data: Array[Byte]) =>
-        if(data == null) {
-          Future(deserialize[A](data, ctag))
-        }
-        else {
-          orElse.flatMap(value => {
-            doSet(key, value, expiration).map(_ => Done).map(_ => value)
-          })
-        }
+      case (data: Array[Byte]) => Future(deserialize[A](data, ctag))
+      case null =>
+        orElse.flatMap(value => {
+          doSet(key, value, expiration).map(_ => Done).map(_ => value)
+        })
     })
   }
 

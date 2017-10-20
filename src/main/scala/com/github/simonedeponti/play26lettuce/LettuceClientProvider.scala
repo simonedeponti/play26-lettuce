@@ -4,7 +4,6 @@ import javax.inject.{Inject, Provider}
 
 import akka.actor.ActorSystem
 import play.api.Configuration
-import play.api.cache.AsyncCacheApi
 import play.api.inject.Injector
 
 import scala.concurrent.ExecutionContext
