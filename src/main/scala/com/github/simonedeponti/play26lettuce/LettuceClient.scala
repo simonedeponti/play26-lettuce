@@ -10,6 +10,7 @@ import akka.actor.ActorSystem
 import akka.serialization.SerializationExtension
 import io.lettuce.core.{RedisClient, SetArgs}
 import io.lettuce.core.api.async.RedisAsyncCommands
+import io.lettuce.core.codec.ByteArrayCodec
 import play.api.Configuration
 
 import scala.collection.JavaConverters._
@@ -23,19 +24,20 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
                               (implicit val ec: ExecutionContext) extends LettuceCacheApi {
 
   private val client: RedisClient = RedisClient.create(configuration.get[String](s"lettuce.$name.url"))
-  private val commands: RedisAsyncCommands[String, String] = client.connect().async()
+  private val codec = new ByteArrayCodec
+  private val commands: RedisAsyncCommands[Array[Byte], Array[Byte]] = client.connect(codec).async()
   private val serialization = SerializationExtension(system)
 
-  private def deserialize[T](data: String, ctag: ClassTag[T]): T = {
-    serialization.deserialize[T](data.getBytes("UTF-8"), ctag.runtimeClass.asInstanceOf[Class[T]]) match {
+  private def deserialize[T](data: Array[Byte], ctag: ClassTag[T]): T = {
+    serialization.deserialize[T](data, ctag.runtimeClass.asInstanceOf[Class[T]]) match {
       case Success(v) => v
       case Failure(e) => throw e
     }
   }
 
-  private def serialize(obj: Any): String = {
+  private def serialize(obj: Any): Array[Byte] = {
     serialization.serialize(obj.asInstanceOf[AnyRef]) match {
-      case Success(s) => s.map(_.toChar).mkString
+      case Success(s) => s
       case Failure(e) => throw e
     }
   }
@@ -44,12 +46,12 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
     expiration match {
       case Duration.Inf =>
         commands.set(
-          s"$name::$key",
+          s"$name::$key".getBytes("UTF-8"),
           serialize(value)
         ).toScala
       case _ =>
         commands.set(
-          s"$name::$key",
+          s"$name::$key".getBytes("UTF-8"),
           serialize(value),
           SetArgs.Builder.ex(expiration.toSeconds)
         ).toScala
@@ -57,16 +59,16 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
   }
 
   override def get[T](key: String)(implicit ctag: ClassTag[T]): Future[Option[T]] = {
-    commands.get(s"$name::$key").toScala map {
-      case (data: String) =>
+    commands.get(s"$name::$key".getBytes("UTF-8")).toScala map {
+      case (data: Array[Byte]) =>
         Some(deserialize[T](data, ctag))
       case null => None
     }
   }
 
   override def getOrElseUpdate[A](key: String, expiration: Duration)(orElse: => Future[A])(implicit ctag: ClassTag[A]): Future[A] = {
-    commands.get(s"$name::$key").toScala.flatMap({
-      case (data: String) =>
+    commands.get(s"$name::$key".getBytes("UTF-8")).toScala.flatMap({
+      case (data: Array[Byte]) =>
         if(data == null) {
           Future(deserialize[A](data, ctag))
         }
@@ -83,11 +85,11 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
   }
 
   override def remove(key: String): Future[Done] = {
-    commands.del(s"$name::$key").toScala.map(_ => Done)
+    commands.del(s"$name::$key".getBytes("UTF-8")).toScala.map(_ => Done)
   }
 
   override def removeAll(): Future[Done] = {
-    commands.keys(s"$name::*").toScala.flatMap(
+    commands.keys(s"$name::*".getBytes("UTF-8")).toScala.flatMap(
       keys => {
         Future.sequence(
           keys.asScala.map(
