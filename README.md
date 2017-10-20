@@ -1,5 +1,7 @@
 # play26-lettuce
 
+[![Build Status](https://travis-ci.org/simonedeponti/play26-lettuce.svg?branch=master)](https://travis-ci.org/simonedeponti/play26-lettuce)
+
 A Redis cache plugin for Play 2.6+, based on lettuce (https://lettuce.io/).
 
 It does support only the `AsyncCacheApi` for the moment.
