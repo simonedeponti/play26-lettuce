@@ -4,11 +4,17 @@
 
 A Redis cache plugin for Play 2.6+, based on lettuce (https://lettuce.io/).
 
-It does support only the `AsyncCacheApi` for the moment.
+It does support Scala and Java `AsyncCacheApi` and `SyncCacheApi`.
 
 It supports SSL, and therefore is suitable for use with Azure Redis Cache.
 
 ## Usage
+
+Add dependency to sbt:
+
+```sbtshell
+libraryDependencies += "com.github.simonedeponti" %% "play26-lettuce" % "0.2.0"
+```
 
 Enable the module:
 
@@ -44,3 +50,14 @@ akka {
   }
 }
 ```
+
+## History
+
+### v0.2.0
+
+- Added support for Scala sync API
+- Added support for Java API (sync & async)
+
+### v0.1
+
+- Initial version

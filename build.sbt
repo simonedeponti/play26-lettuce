@@ -1,6 +1,10 @@
 name := "play26-lettuce"
 
-version := "0.1"
+version := "0.2.0"
+
+organization := "com.github.simonedeponti"
+
+licenses += "BSD New" -> url("https://opensource.org/licenses/BSD-3-Clause")
 
 scalaVersion := "2.11.8"
 
