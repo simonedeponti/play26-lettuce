@@ -1,6 +1,5 @@
 package com.github.simonedeponti.play26lettuce
 
-import java.lang.Integer
 import java.util.concurrent.{Callable, CompletionStage}
 
 import akka.Done
@@ -176,6 +175,18 @@ class LettuceSpec extends Specification {
       }
     }
 
+    "serialize correctly a scala class" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[AsyncCacheApi]))
+        val testItem = TestItem("cat", 3)
+        val result_ok: Future[Option[TestItem]] = cacheApi.set("cat", testItem).flatMap(
+          _ => cacheApi.get[TestItem]("cat")
+        )
+
+        result_ok must beSome(testItem).await
+      }
+    }
+
     "remove deletes it" in {
       implicit ee: ExecutionEnv => {
         val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[AsyncCacheApi]))
@@ -322,6 +333,18 @@ class LettuceSpec extends Specification {
         val result_eq: Future[Integer] = cacheApi.getOrElseUpdate[Integer]("paz", orElse2, 10).toScala
 
         result_eq must beEqualTo(new Integer(1)).await
+      }
+    }
+
+    "serialize correctly a scala class" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[JavaAsyncCacheApi]))
+        val testItem = TestItem("cat", 3)
+        val result_ok: Future[TestItem] = cacheApi.set("cat", testItem).toScala.flatMap(
+          _ => cacheApi.get[TestItem]("cat").toScala
+        )
+
+        result_ok must beEqualTo(testItem).await
       }
     }
 
