@@ -182,8 +182,21 @@ class LettuceSpec extends Specification {
         val result_ok: Future[Option[TestItem]] = cacheApi.set("cat", testItem).flatMap(
           _ => cacheApi.get[TestItem]("cat")
         )
-
         result_ok must beSome(testItem).await
+
+        cacheApi.remove("cat") must beAnInstanceOf[Done].await
+      }
+    }
+
+    "serialize correctly a void string" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[AsyncCacheApi]))
+        val result_ok: Future[Option[String]] = cacheApi.set("void", "").flatMap(
+          _ => cacheApi.get[String]("void")
+        )
+        result_ok must beSome("").await
+
+        cacheApi.remove("void") must beAnInstanceOf[Done].await
       }
     }
 
@@ -343,8 +356,21 @@ class LettuceSpec extends Specification {
         val result_ok: Future[TestItem] = cacheApi.set("cat", testItem).toScala.flatMap(
           _ => cacheApi.get[TestItem]("cat").toScala
         )
-
         result_ok must beEqualTo(testItem).await
+
+        cacheApi.remove("cat").toScala must beAnInstanceOf[Done].await
+      }
+    }
+
+    "serialize correctly a void string" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[JavaAsyncCacheApi]))
+        val result_ok: Future[String] = cacheApi.set("void", "").toScala.flatMap(
+          _ => cacheApi.get[String]("void").toScala
+        )
+        result_ok must beEqualTo("").await
+
+        cacheApi.remove("void").toScala must beAnInstanceOf[Done].await
       }
     }
 
