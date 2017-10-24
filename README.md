@@ -53,6 +53,10 @@ akka {
 
 ## History
 
+### v0.2.1
+
+- Cross building scala 2.12 & 2.11
+
 ### v0.2.0
 
 - Added support for Scala sync API
