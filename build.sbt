@@ -1,14 +1,15 @@
 name := "play26-lettuce"
 
-version := "0.2.0"
+version := "0.2.1"
 
 organization := "com.github.simonedeponti"
 
 licenses += "BSD New" -> url("https://opensource.org/licenses/BSD-3-Clause")
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.4"
+crossScalaVersions := Seq("2.11.11")
 
-libraryDependencies += "org.scala-lang.modules" %% "scala-java8-compat" % "0.7.0"
+libraryDependencies += "org.scala-lang.modules" %% "scala-java8-compat" % "0.8.0"
 libraryDependencies += "io.lettuce" % "lettuce-core" % "5.0.0.RELEASE"
 libraryDependencies += "com.typesafe.play" %% "play" % "2.6.6" % "provided"
 libraryDependencies += "com.typesafe.play" %% "play-cache" % "2.6.6" % "provided"
