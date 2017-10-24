@@ -4,7 +4,7 @@
 
 A Redis cache plugin for Play 2.6+, based on lettuce (https://lettuce.io/).
 
-It does support Scala and Java `AsyncCacheApi` and `SyncCacheApi`.
+It does support Scala (2.12 and 2.11) and Java `AsyncCacheApi` and `SyncCacheApi`.
 
 It supports SSL, and therefore is suitable for use with Azure Redis Cache.
 
@@ -13,7 +13,7 @@ It supports SSL, and therefore is suitable for use with Azure Redis Cache.
 Add dependency to sbt:
 
 ```sbtshell
-libraryDependencies += "com.github.simonedeponti" %% "play26-lettuce" % "0.2.0"
+libraryDependencies += "com.github.simonedeponti" %% "play26-lettuce" % "0.2.1"
 ```
 
 Enable the module:
@@ -26,7 +26,7 @@ play.modules.enabled += "com.github.simondeponti.play26lettuce.LettuceModule"
 Then (optionally) enable Kryo serialization, by adding:
 
 ```sbtshell
-libraryDependencies += "com.github.romix.akka" %% "akka-kryo-serialization" % "0.5.0"
+libraryDependencies += "com.github.romix.akka" %% "akka-kryo-serialization" % "0.5.1"
 ``` 
 
 And then adding in you configuration something like this:
