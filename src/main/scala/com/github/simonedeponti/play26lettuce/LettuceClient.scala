@@ -1,5 +1,6 @@
 package com.github.simonedeponti.play26lettuce
 
+import java.nio.ByteBuffer
 import javax.inject.{Inject, Singleton}
 
 import akka.Done
@@ -10,13 +11,11 @@ import akka.actor.ActorSystem
 import akka.serialization.SerializationExtension
 import io.lettuce.core.{RedisClient, SetArgs}
 import io.lettuce.core.api.async.RedisAsyncCommands
-import io.lettuce.core.codec.ByteArrayCodec
 import play.api.Configuration
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success}
 
 
 @Singleton
@@ -24,51 +23,60 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
                               (implicit val ec: ExecutionContext) extends LettuceCacheApi {
 
   private val client: RedisClient = RedisClient.create(configuration.get[String](s"lettuce.$name.url"))
-  private val codec = new ByteArrayCodec
-  private val commands: RedisAsyncCommands[Array[Byte], Array[Byte]] = client.connect(codec).async()
+  private val codec = new AkkaCodec(system)
+  private val commands: RedisAsyncCommands[String, AnyRef] = client.connect(codec).async()
   private val serialization = SerializationExtension(system)
 
-  private def deserialize[T](data: Array[Byte], ctag: ClassTag[T]): T = {
-    serialization.deserialize[T](data, ctag.getClass.asInstanceOf[Class[T]]) match {
-      case Success(v) => v
-      case Failure(e) => throw e
-    }
+  private def deserialize[T](data: Array[Byte]): T = {
+    val header = data.take(4)
+    val payload = data.takeRight(4)
+    val serializerId = ByteBuffer.wrap(header).getInt
+    val serializer = serialization.serializerByIdentity(serializerId)
+    serializer.fromBinary(payload, manifest = None).asInstanceOf[T]
   }
 
   private def serialize(obj: Any): Array[Byte] = {
-    serialization.serialize(obj.asInstanceOf[AnyRef]) match {
-      case Success(s) => s
-      case Failure(e) => throw e
-    }
+    def serializer = serialization.findSerializerFor(obj.asInstanceOf[AnyRef])
+    def header = ByteBuffer.allocate(4).putInt(serializer.identifier).array()
+    def payload = serializer.toBinary(obj.asInstanceOf[AnyRef])
+    header ++ payload
   }
 
   private def doSet(key: String, value: Any, expiration: Duration): Future[Any] = {
     expiration match {
       case Duration.Inf =>
         commands.set(
-          s"$name::$key".getBytes("UTF-8"),
-          serialize(value)
+          s"$name::$key",
+          value.asInstanceOf[AnyRef]
         ).toScala
       case _ =>
         commands.set(
-          s"$name::$key".getBytes("UTF-8"),
-          serialize(value),
+          s"$name::$key",
+          value.asInstanceOf[AnyRef],
           SetArgs.Builder.ex(expiration.toSeconds)
         ).toScala
     }
   }
 
-  override def get[T](key: String)(implicit ctag: ClassTag[T]): Future[Option[T]] = {
-    commands.get(s"$name::$key".getBytes("UTF-8")).toScala map {
-      case (data: Array[Byte]) =>
-        Some(deserialize[T](data, ctag))
+  override def javaGet[T](key: String): Future[Option[T]] = {
+    commands.get(s"$name::$key").toScala map {
+      case (data: AnyRef) =>
+        Some(data.asInstanceOf[T])
       case null => None
     }
   }
 
+  override def get[T](key: String)(implicit ctag: ClassTag[T]): Future[Option[T]] = {
+    javaGet[T](key)
+  }
+
   override def getOrElseUpdate[A](key: String, expiration: Duration)(orElse: => Future[A])(implicit ctag: ClassTag[A]): Future[A] = {
-    commands.get(s"$name::$key".getBytes("UTF-8")).toScala.flatMap({
-      case (data: Array[Byte]) => Future(deserialize[A](data, ctag))
+    javaGetOrElseUpdate[A](key, expiration)(orElse)
+  }
+
+  override def javaGetOrElseUpdate[A](key: String, expiration: Duration)(orElse: => Future[A]): Future[A] = {
+    commands.get(s"$name::$key").toScala.flatMap({
+      case (data: AnyRef) => Future(data.asInstanceOf[A])
       case null =>
         orElse.flatMap(value => {
           doSet(key, value, expiration).map(_ => Done).map(_ => value)
@@ -81,11 +89,11 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
   }
 
   override def remove(key: String): Future[Done] = {
-    commands.del(s"$name::$key".getBytes("UTF-8")).toScala.map(_ => Done)
+    commands.del(s"$name::$key").toScala.map(_ => Done)
   }
 
   override def removeAll(): Future[Done] = {
-    commands.keys(s"$name::*".getBytes("UTF-8")).toScala.flatMap(
+    commands.keys(s"$name::*").toScala.flatMap(
       keys => {
         Future.sequence(
           keys.asScala.map(

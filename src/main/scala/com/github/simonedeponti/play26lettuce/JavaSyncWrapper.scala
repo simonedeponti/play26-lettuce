@@ -19,29 +19,29 @@ class JavaSyncWrapper @Inject()(val acache: LettuceCacheApi)
     // NOTE: This is a bit weird and non-idiomatic but it's the only way it compiles
     //noinspection GetOrElseNull
     Await.result(
-      acache.get[T](key)(ClassTag.apply[T](getClass)).map(_.getOrElse(null).asInstanceOf[T]),
+      acache.javaGet[T](key).map(_.getOrElse(null).asInstanceOf[T]),
       timeout
     )
   }
 
   override def getOrElseUpdate[T](key: String, block: Callable[T]): T = {
     Await.result(
-      acache.getOrElseUpdate[T](key, Duration.Inf) {
+      acache.javaGetOrElseUpdate[T](key, Duration.Inf) {
         Future {
           block.call()
         }
-      } (ClassTag.apply[T](getClass)),
+      },
       timeout
     )
   }
 
   override def getOrElseUpdate[T](key: String, block: Callable[T], expiration: Int): T = {
     Await.result(
-      acache.getOrElseUpdate[T](key, Duration(expiration, "seconds")) {
+      acache.javaGetOrElseUpdate[T](key, Duration(expiration, "seconds")) {
         Future {
           block.call()
         }
-      } (ClassTag.apply[T](getClass)),
+      },
       timeout
     )
   }

@@ -48,7 +48,7 @@ akka {
       kryo = "com.romix.akka.serialization.kryo.KryoSerializer"
     }
     serialization-bindings {
-      "java.util.LinkedHashMap" = kryo
+      "java.io.Serializable" = kryo
       "my.custom.Class" = kryo
     }
   }
@@ -56,6 +56,10 @@ akka {
 ```
 
 ## History
+
+### v0.2.2
+
+- More robust serialization
 
 ### v0.2.1
 
