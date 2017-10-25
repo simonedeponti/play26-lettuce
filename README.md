@@ -13,7 +13,7 @@ It supports SSL, and therefore is suitable for use with Azure Redis Cache.
 Add dependency to sbt (along with JCenter resolver if missing):
 
 ```sbtshell
-libraryDependencies += "com.github.simonedeponti" %% "play26-lettuce" % "0.2.1"
+libraryDependencies += "com.github.simonedeponti" %% "play26-lettuce" % "0.2.2"
 
 resolvers ++= Seq(
   "jcenter" at "http://jcenter.bintray.com"
