@@ -431,12 +431,18 @@ class LettuceSpec extends Specification {
     "get or else update" in {
       implicit ee: ExecutionEnv => {
         val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[JavaSyncCacheApi]))
-        val orElse1: Callable[Integer] = () => new Integer(1)
+        //noinspection ConvertExpressionToSAM
+        val orElse1: Callable[Integer] = new Callable[Integer] {
+          override def call(): Integer = new Integer(1)
+        }
         val result_ok: Integer = cacheApi.getOrElseUpdate[Integer]("paz", orElse1, 10)
 
         result_ok must beEqualTo(new Integer(1))
 
-        val orElse2: Callable[Integer] = () => new Integer(2)
+        //noinspection ConvertExpressionToSAM
+        val orElse2: Callable[Integer] = new Callable[Integer] {
+          override def call(): Integer = new Integer(2)
+        }
         val result_eq: Integer = cacheApi.getOrElseUpdate[Integer]("paz", orElse2, 10)
 
         result_eq must beEqualTo(new Integer(1))
