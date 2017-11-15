@@ -1,5 +1,7 @@
 package com.github.simonedeponti.play26lettuce
 
+import java.time.Instant
+import java.util.Date
 import java.util.concurrent.{Callable, CompletionStage}
 
 import akka.Done
@@ -429,16 +431,12 @@ class LettuceSpec extends Specification {
     "get or else update" in {
       implicit ee: ExecutionEnv => {
         val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[JavaSyncCacheApi]))
-        val orElse1: Callable[Integer] = new Callable[Integer] {
-          def call(): Integer = new Integer(1)
-        }
+        val orElse1: Callable[Integer] = () => new Integer(1)
         val result_ok: Integer = cacheApi.getOrElseUpdate[Integer]("paz", orElse1, 10)
 
         result_ok must beEqualTo(new Integer(1))
 
-        val orElse2: Callable[Integer] = new Callable[Integer] {
-          def call(): Integer = new Integer(2)
-        }
+        val orElse2: Callable[Integer] = () => new Integer(2)
         val result_eq: Integer = cacheApi.getOrElseUpdate[Integer]("paz", orElse2, 10)
 
         result_eq must beEqualTo(new Integer(1))
@@ -456,6 +454,66 @@ class LettuceSpec extends Specification {
 
         val result_ko = cacheApi.get[Integer]("foo")
         result_ko must beNull[Integer]
+      }
+    }
+  }
+
+  "AkkaSerialization" should {
+
+    def app = play.test.Helpers.fakeApplication(
+      configurationMap.asJava
+    )
+
+    def injector = app.injector
+
+    val now = System.currentTimeMillis()
+
+    "serialize a complex Scala class" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[SyncCacheApi]))
+
+        val value: ComplexTestItem = ComplexTestItem(
+          "foo",
+          None,
+          Map(
+            "bah" -> Seq(),
+            "boh" -> Seq("i")
+          ),
+          SubItem("e", Date.from(Instant.ofEpochMilli(now))),
+          Some(SubItem("e", Date.from(Instant.ofEpochMilli(now)))),
+          active = true
+        )
+
+        val result: Seq[ComplexTestItem] = cacheApi.getOrElseUpdate[Seq[ComplexTestItem]]("complexitemseq", Duration(1, "minute")) {
+          Seq(value)
+        }
+
+        result must not be empty
+        result.head.id must beEqualTo("foo")
+
+        val result2: Seq[ComplexTestItem] = cacheApi.getOrElseUpdate[Seq[ComplexTestItem]]("complexitemseq", Duration(1, "minute")) {
+          Seq(value)
+        }
+
+        result2.head.id must beEqualTo(result.head.id)
+      }
+    }
+
+    "serialize correctly empty sequences" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[SyncCacheApi]))
+
+        val result: Seq[ComplexTestItem] = cacheApi.getOrElseUpdate[Seq[ComplexTestItem]]("voidseq", Duration(1, "minute")) {
+          Seq[ComplexTestItem]()
+        }
+
+        result must beEmpty
+
+        val result2: Seq[ComplexTestItem] = cacheApi.getOrElseUpdate[Seq[ComplexTestItem]]("voidseq", Duration(1, "minute")) {
+          Seq[ComplexTestItem]()
+        }
+
+        result2 must beEmpty
       }
     }
   }
