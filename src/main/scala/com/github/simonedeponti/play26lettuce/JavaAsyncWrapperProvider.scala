@@ -7,7 +7,7 @@ import play.cache.AsyncCacheApi
 class JavaAsyncWrapperProvider(val configuration: Configuration, name: String = "default") extends BaseClientProvider[AsyncCacheApi] {
 
   lazy val get: AsyncCacheApi = {
-    new JavaAsyncWrapper(getLettuceApi(name))(ec)
+    new JavaAsyncWrapper(getLettuceApi(name), configuration)(ec)
   }
 
 }

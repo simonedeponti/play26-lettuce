@@ -2,6 +2,7 @@ package com.github.simonedeponti.play26lettuce
 
 import javax.inject.Inject
 
+import play.api.Configuration
 import play.api.cache.SyncCacheApi
 
 import scala.concurrent.duration.Duration
@@ -9,10 +10,8 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 
-class SyncWrapper @Inject()(val acache: LettuceCacheApi)
-                           (implicit val ec: ExecutionContext) extends SyncCacheApi {
-
-  private val timeout = Duration(1, "seconds")
+class SyncWrapper @Inject()(val acache: LettuceCacheApi, val configuration: Configuration)
+                           (implicit val ec: ExecutionContext) extends SyncCacheApi with TimeoutConfigurable {
 
   override def get[T](key: String)(implicit ctag: ClassTag[T]): Option[T] = {
     Await.result(

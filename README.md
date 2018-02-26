@@ -57,6 +57,10 @@ akka {
 
 ## History
 
+### v0.2.3
+
+- Timeout for sync wrappers is configurable
+
 ### v0.2.2
 
 - More robust serialization

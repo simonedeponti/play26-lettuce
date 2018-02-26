@@ -7,7 +7,7 @@ import play.api.cache.SyncCacheApi
 class SyncWrapperProvider(val configuration: Configuration, val name: String = "default") extends BaseClientProvider[SyncCacheApi] {
 
   lazy val get: SyncCacheApi = {
-    new SyncWrapper(getLettuceApi(name))(ec)
+    new SyncWrapper(getLettuceApi(name), configuration)(ec)
   }
 
 }

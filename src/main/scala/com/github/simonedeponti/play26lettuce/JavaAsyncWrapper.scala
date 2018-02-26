@@ -4,18 +4,18 @@ import java.util.concurrent.{Callable, CompletionStage}
 import javax.inject.Inject
 
 import akka.Done
+import play.api.Configuration
 import play.cache.{AsyncCacheApi, SyncCacheApi}
 
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
-import scala.reflect.ClassTag
 
 
-class JavaAsyncWrapper @Inject()(val acache: LettuceCacheApi)
+class JavaAsyncWrapper @Inject()(val acache: LettuceCacheApi, val configuration: Configuration)
                                 (implicit val ec: ExecutionContext) extends AsyncCacheApi {
 
-  override def sync(): SyncCacheApi = new JavaSyncWrapper(acache)(ec)
+  override def sync(): SyncCacheApi = new JavaSyncWrapper(acache, configuration)(ec)
 
   override def get[T](key: String): CompletionStage[T] = {
     // NOTE: This is a bit weird and non-idiomatic but it's the only way it compiles
