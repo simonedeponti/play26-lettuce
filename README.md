@@ -55,6 +55,26 @@ akka {
 }
 ```
 
+## Configuration
+
+After doing all of the above, one must set the redis endpoint for each cache by specifying `lettuce.$cachename.url`:
+
+```hocon
+
+play.cache {
+  defaultCache = "default"
+  bindCaches = []
+}
+
+lettuce.default.url = "redis://localhost/0"
+```
+
+Optionally, for each cache, a timeout can be set for syncronous wrappers:
+
+```hocon
+lettuce.default.syncTimeout = 3s
+```
+
 ## History
 
 ### v0.2.3
