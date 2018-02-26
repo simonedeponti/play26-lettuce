@@ -10,7 +10,8 @@ import play.api.inject._
 import scala.util.{Failure, Success, Try}
 
 
-class LettuceModule extends SimpleModule((environment: Environment, configuration: Configuration) => {
+/** The dependency-injection module for the cache adapter **/
+class LettuceModule extends SimpleModule((_: Environment, configuration: Configuration) => {
 
   import scala.collection.JavaConverters._
 
@@ -19,8 +20,8 @@ class LettuceModule extends SimpleModule((environment: Environment, configuratio
     case Success(v) => v.asScala
     case Failure(e) =>
       e match {
-        case m: Missing => Seq()
-        case e: Throwable => throw e
+        case _: Missing => Seq()
+        case _: Throwable => throw e
       }
   }
 

@@ -12,6 +12,12 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
 
+/** Java-compatible wrapper that implements [[play.cache.AsyncCacheApi]]
+  *
+  * @param acache A [[LettuceCacheApi]] instance to be wrapped
+  * @param configuration The application configuration
+  * @param ec The execution context
+  */
 class JavaAsyncWrapper @Inject()(val acache: LettuceCacheApi, val configuration: Configuration)
                                 (implicit val ec: ExecutionContext) extends AsyncCacheApi {
 

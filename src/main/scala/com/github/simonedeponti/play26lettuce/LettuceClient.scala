@@ -1,6 +1,5 @@
 package com.github.simonedeponti.play26lettuce
 
-import java.nio.ByteBuffer
 import javax.inject.{Inject, Singleton}
 
 import akka.Done
@@ -8,7 +7,6 @@ import akka.Done
 import scala.reflect.ClassTag
 import scala.compat.java8.FutureConverters._
 import akka.actor.ActorSystem
-import akka.serialization.SerializationExtension
 import io.lettuce.core.{RedisClient, SetArgs}
 import io.lettuce.core.api.async.RedisAsyncCommands
 import play.api.Configuration
@@ -18,30 +16,32 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 
 
+/** The base implementation of [[com.github.simonedeponti.play26lettuce.LettuceCacheApi]].
+  *
+  * @param system The current Akka actor system
+  * @param configuration The application configuration
+  * @param name The cache name (or "default" if missing)
+  * @param ec The execution context to use
+  */
 @Singleton
 class LettuceClient @Inject() (val system: ActorSystem, val configuration: Configuration, val name: String = "default")
                               (implicit val ec: ExecutionContext) extends LettuceCacheApi {
 
+  /** The [[io.lettuce.core.RedisClient]] instance that represents the connection to Redis **/
   private val client: RedisClient = RedisClient.create(configuration.get[String](s"lettuce.$name.url"))
+  /** The serialization codec (an [[com.github.simonedeponti.play26lettuce.AkkaCodec]] instance) **/
   private val codec = new AkkaCodec(system)
+  /** The redis commands bound to the specific client and encoder **/
   private val commands: RedisAsyncCommands[String, AnyRef] = client.connect(codec).async()
-  private val serialization = SerializationExtension(system)
 
-  private def deserialize[T](data: Array[Byte]): T = {
-    val header = data.take(4)
-    val payload = data.takeRight(4)
-    val serializerId = ByteBuffer.wrap(header).getInt
-    val serializer = serialization.serializerByIdentity(serializerId)
-    serializer.fromBinary(payload, manifest = None).asInstanceOf[T]
-  }
-
-  private def serialize(obj: Any): Array[Byte] = {
-    def serializer = serialization.findSerializerFor(obj.asInstanceOf[AnyRef])
-    def header = ByteBuffer.allocate(4).putInt(serializer.identifier).array()
-    def payload = serializer.toBinary(obj.asInstanceOf[AnyRef])
-    header ++ payload
-  }
-
+  /** Do a set on Redis: these are two different method calls depending
+    * on what the duration is (infinite is a special case)
+    *
+    * @param key The key to set
+    * @param value The value to set for the key
+    * @param expiration The TTL of the entry
+    * @return The Redis command result
+    */
   private def doSet(key: String, value: Any, expiration: Duration): Future[Any] = {
     expiration match {
       case Duration.Inf =>

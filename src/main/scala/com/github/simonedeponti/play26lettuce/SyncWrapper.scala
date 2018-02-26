@@ -10,6 +10,12 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 
+/** Wrapper that implements the [[play.api.cache.SyncCacheApi]].
+  *
+  * @param acache The [[LettuceCacheApi]] instance
+  * @param configuration The application configuration
+  * @param ec The execution context
+  */
 class SyncWrapper @Inject()(val acache: LettuceCacheApi, val configuration: Configuration)
                            (implicit val ec: ExecutionContext) extends SyncCacheApi with TimeoutConfigurable {
 

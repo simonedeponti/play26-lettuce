@@ -10,6 +10,12 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 
+/** A wrapper of the default [[LettuceCacheApi]] that provides [[play.cache.SyncCacheApi]]
+  *
+  * @param acache A [[LettuceCacheApi]] instance to wrap
+  * @param configuration The application configuration
+  * @param ec An execution context
+  */
 class JavaSyncWrapper @Inject()(val acache: LettuceCacheApi, val configuration: Configuration)
                                (implicit val ec: ExecutionContext) extends SyncCacheApi with TimeoutConfigurable {
 

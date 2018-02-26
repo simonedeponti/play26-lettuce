@@ -7,9 +7,16 @@ import akka.actor.ActorSystem
 import akka.serialization.SerializationExtension
 import io.lettuce.core.codec.RedisCodec
 
-import scala.collection.mutable
 
-
+/** Encodes and decodes keys and values using akka's pluggable serializers.
+  *
+  * Only values are actually encoded using akka's serialization:
+  * keys are maintained as text to ease debugging.
+  *
+  * See https://doc.akka.io/docs/akka/2.5/serialization.html?language=scala
+  *
+  * @param system Akka's active actor system
+  */
 class AkkaCodec(val system: ActorSystem) extends RedisCodec[String, AnyRef] {
 
   private val serialization = SerializationExtension(system)
