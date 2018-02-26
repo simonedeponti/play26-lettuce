@@ -17,8 +17,8 @@ trait LettuceCacheApi extends AsyncCacheApi {
   /** A get method that is optimized for Java wrappers.
     *
     * @param key The key to get
-    * @tparam T The trype of the value
-    * @return A [[Future]] wrapping an [[Option]] of the object being returned
+    * @tparam T The type of the value
+    * @return A [[scala.concurrent.Future]] wrapping an [[scala.Option]] of the object being returned
     */
   def javaGet[T](key: String): Future[Option[T]]
 
@@ -28,7 +28,7 @@ trait LettuceCacheApi extends AsyncCacheApi {
     * @param expiration The TTL of the key if update is performed
     * @param orElse A function computing the value to insert in cache if the key is missing
     * @tparam A The type of the value
-    * @return A [[Future]] wrapping the result (unlike a get, there is always a result, either fetched or computed)
+    * @return A [[scala.concurrent.Future]] wrapping the result (unlike a get, there is always a result, either fetched or computed)
     */
   def javaGetOrElseUpdate[A](key: String, expiration: Duration)(orElse: => Future[A]): Future[A]
 }

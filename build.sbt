@@ -16,5 +16,6 @@ libraryDependencies += "com.typesafe.play" %% "play-cache" % "2.6.6" % "provided
 libraryDependencies += "com.typesafe.play" %% "play-test" % "2.6.6" % "provided"
 libraryDependencies += "org.specs2" %% "specs2-core" % "3.9.4" % "test"
 
+autoAPIMappings := true
 fork := true
 javaOptions in test += "-XX:MaxMetaspaceSize=512m"
