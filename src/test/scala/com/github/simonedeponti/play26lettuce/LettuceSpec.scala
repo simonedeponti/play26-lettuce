@@ -48,6 +48,7 @@ class LettuceSpec extends Specification {
   private val configuration = play.api.Configuration.from(
     configurationMap
   )
+  private val emptyConfiguration = play.api.Configuration.empty
 
   private val modules = play.api.inject.Modules.locate(environment, configuration)
 
@@ -64,6 +65,14 @@ class LettuceSpec extends Specification {
       val bindings = lettuceModule.bindings(environment, configuration)
 
       bindings.size mustNotEqual 0
+    }
+
+    "provide no bindings with empty configuration" in {
+      val lettuceModule = modules.find { module => module.isInstanceOf[LettuceModule] }.get.asInstanceOf[LettuceModule]
+
+      val bindings = lettuceModule.bindings(environment, emptyConfiguration)
+
+      bindings.size mustEqual 0
     }
   }
 
