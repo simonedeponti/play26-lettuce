@@ -15,7 +15,7 @@ class LettuceModule extends SimpleModule((_: Environment, configuration: Configu
 
   import scala.collection.JavaConverters._
 
-  val defaultCacheName = configuration.underlying.getString("play.cache.defaultCache")
+  val defaultCacheName = Try(configuration.underlying.getString("play.cache.defaultCache")).toOption
   val bindCaches = Try(configuration.underlying.getStringList("play.cache.bindCaches")) match {
     case Success(v) => v.asScala
     case Failure(e) =>
@@ -42,11 +42,11 @@ class LettuceModule extends SimpleModule((_: Environment, configuration: Configu
     )
   }
 
-  Seq(
+  defaultCacheName.map(defaultCacheName => Seq(
     bind[LettuceCacheApi].to(new LettuceClientProvider(configuration, defaultCacheName)),
     bind[AsyncCacheApi].to(new LettuceClientProvider(configuration, defaultCacheName)),
     bind[SyncCacheApi].to(new SyncWrapperProvider(configuration, defaultCacheName)),
     bind[JavaAsyncCacheApi].to(new JavaAsyncWrapperProvider(configuration, defaultCacheName)),
     bind[JavaSyncCacheApi].to(new JavaSyncWrapperProvider(configuration, defaultCacheName))
-  ) ++ bindCaches.flatMap(bindCache)
+  )).getOrElse(Nil) ++ bindCaches.flatMap(bindCache)
 })
