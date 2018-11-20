@@ -1,5 +1,6 @@
 package com.github.simonedeponti.play26lettuce
 
+import akka.Done
 import play.api.cache.AsyncCacheApi
 
 import scala.concurrent.Future
@@ -31,4 +32,28 @@ trait LettuceCacheApi extends AsyncCacheApi {
     * @return A [[scala.concurrent.Future]] wrapping the result (unlike a get, there is always a result, either fetched or computed)
     */
   def javaGetOrElseUpdate[A](key: String, expiration: Duration)(orElse: => Future[A]): Future[A]
+
+  /** A multi-key get method
+   *
+   * @param keys A sequence of keys to get
+   * @tparam T The type of the value
+   * @return A [[scala.concurrent.Future]] wrapping a [[scala.collection.Seq]] of [[scala.Option]]s of the object being returned, one for each requested key
+   */
+  def getAll[T <: AnyRef](keys: Seq[String]): Future[Seq[Option[T]]]
+
+  /** A multi-key remove method
+   *
+   * @param keys A sequence to keys to remove
+   * @return A [[scala.concurrent.Future]] that indicates when the keys have been removed
+   */
+  def remove(keys: Seq[String]): Future[Done]
+
+  /** A multi-key set method
+   *
+   * Sets the keys to their respective values, with no expiry. Replaces existing values with new values.
+   *
+   * @param keyValues key-value pairs
+   * @return A [[scala.concurrent.Future]] that indicates when the keys have been set
+   */
+  def setAll(keyValues: Map[String, AnyRef]): Future[Done]
 }

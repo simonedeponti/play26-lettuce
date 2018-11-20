@@ -147,6 +147,50 @@ class LettuceSpec extends Specification {
       }
     }
 
+    "get multiple some if present" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[LettuceCacheApi]))
+
+        val result: Future[Seq[Option[Integer]]] = for {
+          _ <- cacheApi.set("qux", 1)
+          _ <- cacheApi.set("quux", 2)
+          get <- cacheApi.getAll[Integer](Seq("qux", "quux", "not-set"))
+        } yield get
+
+        result must beEqualTo(Seq(Some(1), Some(2), None)).await
+      }
+    }
+
+    "set multiple" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[LettuceCacheApi]))
+
+        val result: Future[(Option[Int], Option[Int])] = for {
+          _ <- cacheApi.setAll(Map("blah" -> Int.box(1), "blaah" -> Int.box(2)))
+          get1 <- cacheApi.get[Int]("blah")
+          get2 <- cacheApi.get[Int]("blaah")
+        } yield (get1, get2)
+
+        result must beEqualTo((Some(1), Some(2))).await
+      }
+    }
+
+    "remove multiple" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[LettuceCacheApi]))
+
+        val result: Future[(Option[Int], Option[Int], Option[Int])] = for {
+          _ <- cacheApi.setAll(Map("da" -> Int.box(1), "daa" -> Int.box(2), "daaa" -> Int.box(3)))
+          _ <- cacheApi.remove(Seq("daa", "daaa"))
+          get1 <- cacheApi.get[Int]("da")
+          get2 <- cacheApi.get[Int]("daa")
+          get3 <- cacheApi.get[Int]("daaa")
+        } yield (get1, get2, get3)
+
+        result must beEqualTo((Some(1), None, None)).await
+      }
+    }
+
     "get none if not present" in {
       implicit ee: ExecutionEnv => {
         val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[AsyncCacheApi]))
