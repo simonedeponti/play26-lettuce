@@ -1,14 +1,12 @@
 package com.github.simonedeponti.play26lettuce
 
-import java.util
-
 import javax.inject.{ Inject, Singleton }
 import akka.Done
 
 import scala.reflect.ClassTag
 import scala.compat.java8.FutureConverters._
 import akka.actor.ActorSystem
-import io.lettuce.core.{ KeyValue, RedisClient, RedisFuture, SetArgs }
+import io.lettuce.core.{ KeyValue, RedisClient, SetArgs, ScanCursor, ScanArgs }
 import io.lettuce.core.api.async.RedisAsyncCommands
 import play.api.Configuration
 
@@ -117,14 +115,26 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
   }
 
   override def removeAll(): Future[Done] = {
-    commands.keys(s"$name::*").toScala.flatMap(
-      keys => {
-        Future.sequence(
-          keys.asScala.map(
-            key => commands.del(key).toScala
-          )
-        ).map(_ => Done)
+    doRemoveAll(ScanCursor.INITIAL, ScanArgs.Builder.matches(s"$name::*").limit(200))
+  }
+
+  private def doRemoveAll(cursor: ScanCursor, scanArgs: ScanArgs): Future[Done] = {
+    commands.scan(cursor, scanArgs).toScala.flatMap { next =>
+      val keys = next.getKeys.asScala
+
+      val delete = if (keys.nonEmpty) {
+        commands.del(keys: _*).toScala
+      } else {
+        Future.successful(Done)
       }
-    )
+
+      val continue = if (!next.isFinished) {
+        doRemoveAll(next, scanArgs)
+      } else {
+        Future.successful(Done)
+      }
+
+      delete.flatMap(_ => continue)
+    }
   }
 }

@@ -278,6 +278,30 @@ class LettuceSpec extends Specification {
         result_fin must beAnInstanceOf[Done].await
       }
     }
+
+    "removeAll should remove a lot of keys successfully" in {
+      implicit ee: ExecutionEnv => {
+        val cacheApi = injector.instanceOf(play.api.inject.BindingKey(classOf[LettuceCacheApi]))
+
+        val result = for {
+          _ <- cacheApi.set("foo1", "bar")
+          _ <- cacheApi.set("foo2", "bar")
+          _ <- cacheApi.set("foo3", "bar")
+          _ <- cacheApi.set("foo4", "bar")
+          _ <- cacheApi.set("foo5", "bar")
+          _ <- cacheApi.set("foo6", "bar")
+          _ <- cacheApi.set("foo7", "bar")
+          _ <- cacheApi.set("foo8", "bar")
+          _ <- cacheApi.set("foo9", "bar")
+          _ <- cacheApi.set("foo10", "bar")
+          _ <- cacheApi.set("foo11", "bar")
+          _ <- cacheApi.set("foo12", "bar")
+          removed <- cacheApi.removeAll()
+        } yield removed
+
+        result must beAnInstanceOf[Done].await
+      }
+    }
   }
 
   "SyncCacheApi" should {
