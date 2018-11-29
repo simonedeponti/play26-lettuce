@@ -7,6 +7,7 @@ import java.util.concurrent.{Callable, CompletionStage}
 import akka.Done
 import org.specs2.mutable._
 import org.specs2.concurrent.ExecutionEnv
+import play.api.PlayException
 import play.api.cache.{AsyncCacheApi, SyncCacheApi}
 import play.cache.{AsyncCacheApi => JavaAsyncCacheApi, SyncCacheApi => JavaSyncCacheApi}
 import play.cache.NamedCacheImpl
@@ -48,6 +49,9 @@ class LettuceSpec extends Specification {
   private val configuration = play.api.Configuration.from(
     configurationMap
   )
+  private val wrongConfiguration = play.api.Configuration.from(
+    configurationMap ++ Map("lettuce.secondary.url" -> redisURL("0"))
+  )
   private val emptyConfiguration = play.api.Configuration.empty
 
   private val modules = play.api.inject.Modules.locate(environment, configuration)
@@ -73,6 +77,12 @@ class LettuceSpec extends Specification {
       val bindings = lettuceModule.bindings(environment, emptyConfiguration)
 
       bindings.size mustEqual 0
+    }
+
+    "report an error if we have a URL conflict" in {
+      val lettuceModule = modules.find { module => module.isInstanceOf[LettuceModule] }.get.asInstanceOf[LettuceModule]
+
+      lettuceModule.bindings(environment, wrongConfiguration) must throwA[PlayException]
     }
   }
 

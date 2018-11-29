@@ -25,6 +25,26 @@ class LettuceModule extends SimpleModule((_: Environment, configuration: Configu
       }
   }
 
+  if(defaultCacheName.isDefined) {
+    // Checks that two caches don't have the same URL by mistake
+    val cacheURLs: Map[String, String] = Map("default" -> configuration.underlying.getString("lettuce.default.url")) ++ (
+      for (cacheName <- bindCaches) yield {
+        cacheName -> configuration.underlying.getString(s"lettuce.$cacheName.url")
+      }).toMap
+    cacheURLs.toSeq.groupBy[String](_._2).foreach({
+      case (url: String, values: Seq[(String, String)]) =>
+        if(values.lengthCompare(1) > 0) {
+          val sameURLs: Seq[String] = values.map(i => s"lettuce.${i._1}.url")
+          throw configuration.reportError(
+            sameURLs.head,
+            s"""has the same URL ($url) as ${sameURLs.tail.mkString(" and ")}.
+               | This will cause a key collision so please use a different Redis database
+               | (the number at the end) for every cache""".stripMargin
+          )
+        }
+    })
+  }
+
   // Creates a named cache qualifier
   def named(name: String): NamedCache = {
     new NamedCacheImpl(name)

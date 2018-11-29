@@ -69,6 +69,38 @@ play.cache {
 lettuce.default.url = "redis://localhost/0"
 ```
 
+If you need additional caches,
+put them into `bindCaches` and then create the corresponding `lettuce.$cacheName.url` config key.
+
+**Never specify the exact same URL for two caches: please use different databases to separate them**
+
+Correct example:
+
+```hocon
+
+play.cache {
+  defaultCache = "default"
+  bindCaches = ["users"]
+}
+
+lettuce.default.url = "redis://localhost/0"
+lettuce.users.url = "redis://localhost/1"
+```
+
+Wrong example (the two caches might have key conflicts, and will throw an error upon start):
+
+```hocon
+
+play.cache {
+  defaultCache = "default"
+  bindCaches = ["users"]
+}
+
+lettuce.default.url = "redis://localhost/0"
+lettuce.users.url = "redis://localhost/0"  # Same URL, everything explodes in a ball of fire.
+```
+
+
 Optionally, for each cache, a timeout can be set for syncronous wrappers:
 
 ```hocon
@@ -76,6 +108,13 @@ lettuce.default.syncTimeout = 3s
 ```
 
 ## History
+
+### v1.0.0
+
+- Added multiset/multiget support in custom interface (dominics)
+- No configuration silently exports no bindings (dominics)
+- Better support for multiple caches without using KEYS
+  command but mandating separated databases for different caches
 
 ### v0.2.3
 
