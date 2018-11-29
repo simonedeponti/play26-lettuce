@@ -22,10 +22,10 @@ class LettuceSpec extends Specification {
 
   sequential
 
-  private val redisURL = Try(sys.env("REDIS_URL")) match {
-    case Success(v) => v
+  private def redisURL(db: String): String = Try(sys.env("REDIS_URL")) match {
+    case Success(v) => v.replace("/0", s"/$db")
     case Failure(e) => e match {
-      case _: NoSuchElementException => "redis://localhost/0"
+      case _: NoSuchElementException => s"redis://localhost/$db"
       case e: Throwable => throw e
     }
   }
@@ -42,8 +42,8 @@ class LettuceSpec extends Specification {
     "play.allowGlobalApplication" -> "false",
     "play.cache.defaultCache" -> "default",
     "play.cache.bindCaches" -> List("secondary").asJava,
-    "lettuce.default.url" -> redisURL,
-    "lettuce.secondary.url" -> redisURL
+    "lettuce.default.url" -> redisURL("0"),
+    "lettuce.secondary.url" -> redisURL("1")
   )
   private val configuration = play.api.Configuration.from(
     configurationMap
@@ -276,6 +276,33 @@ class LettuceSpec extends Specification {
 
         val result_fin: Future[Done] = cacheApi.removeAll()
         result_fin must beAnInstanceOf[Done].await
+      }
+    }
+
+    "removeAll should not remove things from secondary" in {
+      implicit ee: ExecutionEnv => {
+        val defaultCache = injector.instanceOf(play.api.inject.BindingKey(classOf[AsyncCacheApi]))
+        val secondaryCache = injector.instanceOf(
+          play.api.inject.BindingKey(classOf[AsyncCacheApi]).qualifiedWith(new NamedCacheImpl("secondary"))
+        )
+
+        val defaultSetResult: Future[Done] = defaultCache.set("foo", 1)
+        defaultSetResult must beAnInstanceOf[Done].await
+
+        val secondarySetResult: Future[Done] = secondaryCache.set("foo", 1)
+        secondarySetResult must beAnInstanceOf[Done].await
+
+        val removeAllResult: Future[Done] = defaultCache.removeAll()
+        removeAllResult must beAnInstanceOf[Done].await
+
+        val noItemResult: Future[Option[Int]] = defaultCache.get[Int]("foo")
+        noItemResult must beNone.await
+
+        val oneItemResult: Future[Option[Int]] = secondaryCache.get[Int]("foo")
+        oneItemResult must beSome[Int](1).await
+
+        val removeAllResult2: Future[Done] = secondaryCache.removeAll()
+        removeAllResult2 must beAnInstanceOf[Done].await
       }
     }
   }

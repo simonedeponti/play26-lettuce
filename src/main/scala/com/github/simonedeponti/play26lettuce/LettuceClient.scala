@@ -1,19 +1,16 @@
 package com.github.simonedeponti.play26lettuce
 
-import java.util
-
 import javax.inject.{ Inject, Singleton }
 import akka.Done
 
 import scala.reflect.ClassTag
 import scala.compat.java8.FutureConverters._
 import akka.actor.ActorSystem
-import io.lettuce.core.{ KeyValue, RedisClient, RedisFuture, SetArgs }
+import io.lettuce.core.{ KeyValue, RedisClient, SetArgs }
 import io.lettuce.core.api.async.RedisAsyncCommands
 import play.api.Configuration
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.Duration
 
@@ -48,12 +45,12 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
     expiration match {
       case Duration.Inf =>
         commands.set(
-          s"$name::$key",
+          key,
           value.asInstanceOf[AnyRef]
         ).toScala
       case _ =>
         commands.set(
-          s"$name::$key",
+          key,
           value.asInstanceOf[AnyRef],
           SetArgs.Builder.ex(expiration.toSeconds)
         ).toScala
@@ -61,8 +58,8 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
   }
 
   override def javaGet[T](key: String): Future[Option[T]] = {
-    commands.get(s"$name::$key").toScala map {
-      case (data: AnyRef) =>
+    commands.get(key).toScala map {
+      case data: AnyRef =>
         Some(data.asInstanceOf[T])
       case null => None
     }
@@ -73,7 +70,7 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
   }
 
   override def getAll[T <: AnyRef](keys: Seq[String]): Future[Seq[Option[T]]] = {
-    commands.mget(keys.map(key => s"$name::$key"): _*).toScala.map(_.asScala.map {
+    commands.mget(keys: _*).toScala.map(_.asScala.map {
       case data: KeyValue[String, AnyRef] if data.hasValue => Some(data.getValue).asInstanceOf[Option[T]]
       case data: KeyValue[String, AnyRef] if !data.hasValue => None
       case null => None
@@ -85,8 +82,8 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
   }
 
   override def javaGetOrElseUpdate[A](key: String, expiration: Duration)(orElse: => Future[A]): Future[A] = {
-    commands.get(s"$name::$key").toScala.flatMap({
-      case (data: AnyRef) => Future(data.asInstanceOf[A])
+    commands.get(key).toScala.flatMap({
+      case data: AnyRef => Future(data.asInstanceOf[A])
       case null =>
         orElse.flatMap(value => {
           doSet(key, value, expiration).map(_ => Done).map(_ => value)
@@ -100,31 +97,19 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
 
   override def setAll(keyValues: Map[String, AnyRef]): Future[Done] = {
     commands.mset(
-      mutable.Map(
-        keyValues.map {
-          case (key, value) => (s"$name::$key", value)
-        }.toSeq: _*
-      ).asJava
+      keyValues.asJava
     ).toScala.map(_ => Done)
   }
 
   override def remove(key: String): Future[Done] = {
-    commands.del(s"$name::$key").toScala.map(_ => Done)
+    commands.del(key).toScala.map(_ => Done)
   }
 
   override def remove(keys: Seq[String]): Future[Done] = {
-    commands.del(keys.map(key => s"$name::$key"): _*).toScala.map(_ => Done)
+    commands.del(keys: _*).toScala.map(_ => Done)
   }
 
   override def removeAll(): Future[Done] = {
-    commands.keys(s"$name::*").toScala.flatMap(
-      keys => {
-        Future.sequence(
-          keys.asScala.map(
-            key => commands.del(key).toScala
-          )
-        ).map(_ => Done)
-      }
-    )
+    commands.flushdb().toScala.map(_ => Done)
   }
 }
