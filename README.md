@@ -13,7 +13,7 @@ It supports SSL, and therefore is suitable for use with Azure Redis Cache.
 Add dependency to sbt (along with the resolver to BinTray):
 
 ```sbtshell
-libraryDependencies += "com.github.simonedeponti" %% "play26-lettuce" % "0.2.2"
+libraryDependencies += "com.github.simonedeponti" %% "play26-lettuce" % "1.0.0"
 
 resolvers ++= Seq(
   "simonedeponti-bintray" at "https://dl.bintray.com/simonedeponti/maven"
