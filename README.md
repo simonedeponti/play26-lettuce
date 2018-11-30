@@ -30,14 +30,14 @@ play.modules.enabled += "com.github.simondeponti.play26lettuce.LettuceModule"
 Then (optionally) enable Kryo serialization, by adding:
 
 ```sbtshell
-libraryDependencies += "com.github.romix.akka" %% "akka-kryo-serialization" % "0.5.1"
+libraryDependencies += "com.twitter" %% "chill-akka" % "0.9.3"
+libraryDependencies += "com.twitter" % "chill-java" % "0.9.3"
 ``` 
 
 And then adding in you configuration something like this:
 
 ```hocon
 akka {
-  extensions = ["com.romix.akka.serialization.kryo.KryoSerializationExtension$"]
   actor {
     kryo {
       idstrategy = default
@@ -45,11 +45,17 @@ akka {
     }
     serializers {
       java = "akka.serialization.JavaSerializer"
-      kryo = "com.romix.akka.serialization.kryo.KryoSerializer"
+      kryo = "com.twitter.chill.akka.AkkaSerializer"
     }
+
     serialization-bindings {
-      "java.io.Serializable" = kryo
+      "scala.Product" = kryo
+      "scala.None" = kryo
+      "scala.Some" = kryo
+      "scala.collection.Seq" = kryo
+      "scala.collection.Map" = kryo
       "my.custom.Class" = kryo
+      "java.io.Serializable" = kryo
     }
   }
 }
