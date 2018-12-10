@@ -87,12 +87,13 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
       case data: AnyRef => Future(data.asInstanceOf[A])
       case null =>
         val orElseFut = orElse
-        orElseFut onComplete {
-          t: Try[A] =>
+        orElseFut.onComplete(
+          (t: Try[A]) => {
             if(t.isSuccess) {
               doSet(key, t.get, expiration)
             }
-        }
+          }
+        )
         orElseFut
     })
   }
