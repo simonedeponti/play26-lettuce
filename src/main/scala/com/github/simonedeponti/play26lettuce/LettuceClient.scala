@@ -1,18 +1,19 @@
 package com.github.simonedeponti.play26lettuce
 
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 import akka.Done
 
 import scala.reflect.ClassTag
 import scala.compat.java8.FutureConverters._
 import akka.actor.ActorSystem
-import io.lettuce.core.{ KeyValue, RedisClient, SetArgs }
+import io.lettuce.core.{KeyValue, RedisClient, SetArgs}
 import io.lettuce.core.api.async.RedisAsyncCommands
 import play.api.Configuration
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 
 /** The base implementation of [[com.github.simonedeponti.play26lettuce.LettuceCacheApi]].
@@ -85,9 +86,14 @@ class LettuceClient @Inject() (val system: ActorSystem, val configuration: Confi
     commands.get(key).toScala.flatMap({
       case data: AnyRef => Future(data.asInstanceOf[A])
       case null =>
-        orElse.flatMap(value => {
-          doSet(key, value, expiration).map(_ => Done).map(_ => value)
-        })
+        val orElseFut = orElse
+        orElseFut onComplete {
+          t: Try[A] =>
+            if(t.isSuccess) {
+              doSet(key, t.get, expiration)
+            }
+        }
+        orElseFut
     })
   }
 
