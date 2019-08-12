@@ -5,7 +5,6 @@ import akka.Done
 
 import scala.reflect.ClassTag
 import scala.compat.java8.FutureConverters._
-import akka.actor.ActorSystem
 import io.lettuce.core.{KeyValue, RedisClient, SetArgs}
 import io.lettuce.core.api.async.RedisAsyncCommands
 import play.api.Configuration
@@ -18,19 +17,17 @@ import scala.util.Try
 
 /** The base implementation of [[com.github.simonedeponti.play26lettuce.LettuceCacheApi]].
   *
-  * @param system The current Akka actor system
+  * @param codec A lettuce RedisCodec that can be used to serialize AnyRef
   * @param configuration The application configuration
   * @param name The cache name (or "default" if missing)
   * @param ec The execution context to use
   */
 @Singleton
-class LettuceClient @Inject() (val system: ActorSystem, val configuration: Configuration, val name: String = "default")
+class LettuceClient @Inject() (protected val codec: AkkaCodec, val configuration: Configuration, val name: String = "default")
                               (implicit val ec: ExecutionContext) extends LettuceCacheApi {
 
   /** The [[io.lettuce.core.RedisClient]] instance that represents the connection to Redis **/
   private val client: RedisClient = RedisClient.create(configuration.get[String](s"lettuce.$name.url"))
-  /** The serialization codec (an [[com.github.simonedeponti.play26lettuce.AkkaCodec]] instance) **/
-  private val codec = new AkkaCodec(system)
   /** The redis commands bound to the specific client and encoder **/
   private val commands: RedisAsyncCommands[String, AnyRef] = client.connect(codec).async()
 

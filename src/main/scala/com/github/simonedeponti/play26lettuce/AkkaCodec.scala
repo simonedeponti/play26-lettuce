@@ -2,6 +2,7 @@ package com.github.simonedeponti.play26lettuce
 
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import javax.inject.Inject
 
 import akka.actor.ActorSystem
 import akka.serialization.SerializationExtension
@@ -17,7 +18,7 @@ import io.lettuce.core.codec.RedisCodec
   *
   * @param system Akka's active actor system
   */
-class AkkaCodec(val system: ActorSystem) extends RedisCodec[String, AnyRef] {
+class AkkaCodec @Inject() (val system: ActorSystem) extends RedisCodec[String, AnyRef] {
 
   private val serialization = SerializationExtension(system)
   private val charset = Charset.forName("UTF-8")
